@@ -50,20 +50,21 @@ const Board = (props) => {
     //     }
     // };
 
-    let showZeros = function (x, y) {
-        if (x < 0 || x > props.width || y < 0 || y > props.width) {
-            return;
-        }
-        if (_this.sortMap[x + '_' + y].value === 0) {
+    /*let showZeros = function (x, y) {
+     if (x < 0 || x > props.width || y < 0 || y > props.width) {
+     return;
+     }
+     if (_this.sortMap[x + '_' + y].value === 0) {
 
-        }
-    };
+     }
+     };*/
 
+    debugger;
     return (
         <div className="row">
             <div className="Board" style={props.style}>
                 {
-                    Object.keys( props.boardData).map((key, index) =>
+                    Object.keys(props.boardData).map((key, index) =>
                         <Cell key={key} cellData={ props.boardData[key]} id={key} width={props.width}
                               clickOnCell={props.clickOnCell}/>
                     )
@@ -74,10 +75,30 @@ const Board = (props) => {
 };
 
 class Form extends Component {
+    state = {
+        width:10,
+        height:10,
+        mines:10
+    };
+
+    handleSubmit = function(event){
+        event.preventDefault();
+        console.log(this);
+
+        this.props.invoke(this.state)
+    };
 
     render() {
         return (
-            <button onClick={this.props.invoke}> click me</button>
+            <form onSubmit={this.handleSubmit.bind(this)}>
+                <label className="inptLbl">Height:</label>
+                <input type="number" value={this.state.height} onChange={(event) => this.setState({height:event.target.value})} id="heightInpt" name="height"/>
+                <label className="inptLbl">Width:</label>
+                <input type="number" value={this.state.width} onChange={(event) => this.setState({width:event.target.value})}id="widthInpt" name="width"/>
+                <label className="inptLbl">Mines:</label>
+                <input type="number" value={this.state.mines} onChange={(event) => this.setState({mines:event.target.value})}id="minesInpt" name="mines"/>
+                <input type="submit" value="Start Game"/>
+            </form>
         );
     }
 }
@@ -86,14 +107,26 @@ class Game extends Component {
 
     state = {
         sortMap: [],
-        height: 5,
-        width: 6,
-        mines: 5,
+        height: 0,
+        width: 0,
+        mines: 0,
         style: {}
     };
 
-    arrayOfHeight = _.range(0, this.state.height);
-    arrayOfWidth = _.range(0, this.state.width);
+
+
+    initState = (formState) =>{
+        this.setState(() => ({
+            width: formState.width,
+            height:formState.height,
+            mines: formState.mines,
+            style: {
+                height: 'auto',
+                width: 50 * formState.width + 2 * formState.width + 'px',
+                margin: '10px auto'
+            }
+        }), this.buildBoard);
+    };
 
     mineMap = function () {
 
@@ -140,9 +173,8 @@ class Game extends Component {
         return grid;
     };
 
-    updateMap = function(e){
-        debugger;
-        if(e) {
+    updateMap = function (e) {
+        if (e) {
             if (this.hasClass(e.target, 'mine')) {
                 alert('you lose');
             } else {
@@ -154,20 +186,23 @@ class Game extends Component {
     };
 
     hasClass = function (element, cls) {
-    return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
-};
+        return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
+    };
 
     buildBoard = () => {
         let _this = this;
         let buildMap = {};
         let sortMap = [];
         let mMap = {};
-
+        debugger;
 
         mMap = _this.mineMap();
 
-        _this.arrayOfHeight.forEach(function (itemH) {
-            _this.arrayOfWidth.forEach(function (itemW) {
+        const arrayOfHeight = _.range(0, this.state.height);
+        const arrayOfWidth = _.range(0, this.state.width);
+
+        arrayOfHeight.forEach(function (itemH) {
+            arrayOfWidth.forEach(function (itemW) {
                 let value = 0;
 
                 if (mMap[itemW + ',' + itemH]) {
@@ -196,24 +231,18 @@ class Game extends Component {
         }
 
         this.setState(() => ({
-            sortMap: sortMap
+            sortMap: sortMap,
         }));
 
     };
 
     render() {
 
-        this.state.style = {
-            height: 'auto',
-            width: 50 * this.state.width + 2 * this.state.width + 'px',
-            margin: '10px auto'
-        };
-
         return (
             <div className="App">
                 <Header/>
-                <Form invoke={this.buildBoard}/>
-                <div className="board-wrp" >
+                <Form invoke={this.initState.bind(this)} />
+                <div className="board-wrp">
                     <Board boardData={this.state.sortMap} style={this.state.style} clickOnCell={this.updateMap}/>
                 </div>
             </div>
