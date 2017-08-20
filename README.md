@@ -2,7 +2,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 
 ## Mine Sweeper ##
-* Rules of the game:
+  #### Rules of the game:  ####
 * Board should be of configurable width, height and mines number.
 * Should display an indication of the number of remaining flags above the board.
 * Click on cell reveals the value underneath it:
