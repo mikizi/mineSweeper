@@ -7,7 +7,7 @@ import classNames from "classnames";
 //let classNames = require('classnames');
 //let _ = require('underscore');
 
-const Header = (props) => {
+const Header = () => {
     return (
         <div className="App-header">
             {/* <img src={logo} className="App-logo" alt="logo" />*/}
@@ -17,21 +17,22 @@ const Header = (props) => {
 };
 
 const Cell = (props) => {
-
     const location = props.cellData.location;
     const classes = ( location.x === 0) ? 'first cell' : ((location.x === (props.width - 1)) ? 'last cell' : 'cell');
-    const isMined = props.cellData.value === '+' ? 'mine' : '';
-    const cellClass = classNames(
-        'cell-x-' + location.x,
-        'cell-y-' + location.y,
-        classes,
-        isMined
-    );
+    const isMined = props.cellData.value === '+' ? 'mine ' : ''; //glyphicon glyphicon-fire
+    const isReveal = props.cellData.isRevealed ? 'show' : '';
+    const cellClass = classes + ' ' + isMined + ' ' + isReveal;
 
-    console.log(location.x, location.y);
+    // console.log(location.x, location.y);
     return (
-        <div data-x={location.x} data-y={location.y} key={props.id} className={cellClass} onClick={props.clickOnCell()}>
-            {props.cellData.value}
+        <div data-x={location.x}
+             data-y={location.y}
+             data-val={props.cellData.value}
+             id={props.id}
+             className={cellClass}
+             onClick={props.clickCell}
+        >
+            <span>{props.cellData.value}</span>
         </div>
     );
 };
@@ -41,33 +42,19 @@ const Board = (props) => {
 
     _this.sortMap = {};
 
-
-    // let handleClick = function (e) {
-    //     if (hasClass(e.target, 'mine')) {
-    //         alert('you lose');
-    //     } else {
-    //         e.target.classList.add('show');
-    //     }
-    // };
-
-    /*let showZeros = function (x, y) {
-     if (x < 0 || x > props.width || y < 0 || y > props.width) {
-     return;
-     }
-     if (_this.sortMap[x + '_' + y].value === 0) {
-
-     }
-     };*/
-
-    debugger;
     return (
         <div className="row">
             <div className="Board" style={props.style}>
                 {
-                    Object.keys(props.boardData).map((key, index) =>
-                        <Cell key={key} cellData={ props.boardData[key]} id={key} width={props.width}
-                              clickOnCell={props.clickOnCell}/>
-                    )
+                    props.boardData.map((row, y) => {
+                        return row.map((col, x) => {
+                            return (
+                                <Cell key={x + '_' + y} cellData={col} id={x + '_' + y} width={props.width}
+                                      clickCell={props.clickOnCell}/>
+                            );
+                        })
+                    })
+
                 }
             </div>
         </div>
@@ -76,27 +63,30 @@ const Board = (props) => {
 
 class Form extends Component {
     state = {
-        width:10,
-        height:10,
-        mines:10
+        width: 3,
+        height: 3,
+        mines: 1
     };
 
-    handleSubmit = function(event){
+    handleSubmit = (event) => {
         event.preventDefault();
-        console.log(this);
+        //console.log(this);
 
         this.props.invoke(this.state)
     };
 
     render() {
         return (
-            <form onSubmit={this.handleSubmit.bind(this)}>
+            <form onSubmit={this.handleSubmit}>
                 <label className="inptLbl">Height:</label>
-                <input type="number" value={this.state.height} onChange={(event) => this.setState({height:event.target.value})} id="heightInpt" name="height"/>
+                <input type="number" value={this.state.height}
+                       onChange={(event) => this.setState({height: event.target.value})} id="heightInpt" name="height"/>
                 <label className="inptLbl">Width:</label>
-                <input type="number" value={this.state.width} onChange={(event) => this.setState({width:event.target.value})}id="widthInpt" name="width"/>
+                <input type="number" value={this.state.width}
+                       onChange={(event) => this.setState({width: event.target.value})} id="widthInpt" name="width"/>
                 <label className="inptLbl">Mines:</label>
-                <input type="number" value={this.state.mines} onChange={(event) => this.setState({mines:event.target.value})}id="minesInpt" name="mines"/>
+                <input type="number" value={this.state.mines}
+                       onChange={(event) => this.setState({mines: event.target.value})} id="minesInpt" name="mines"/>
                 <input type="submit" value="Start Game"/>
             </form>
         );
@@ -113,19 +103,65 @@ class Game extends Component {
         style: {}
     };
 
-
-
-    initState = (formState) =>{
+    initState = (formState) => {
         this.setState(() => ({
             width: formState.width,
-            height:formState.height,
+            height: formState.height,
             mines: formState.mines,
             style: {
                 height: 'auto',
                 width: 50 * formState.width + 2 * formState.width + 'px',
                 margin: '10px auto'
             }
-        }), this.buildBoard);
+        }), this.initGameState); //this.buildBoard
+    };
+
+    initGameState = () => {
+        let sortMap = [];
+        let _this = this;
+        let mMap = this.mineMap();
+        let buildMap = {};
+
+        const arrayOfHeight = _.range(0, this.state.height);
+        const arrayOfWidth = _.range(0, this.state.width);
+
+        arrayOfHeight.forEach(function (itemH) {
+            arrayOfWidth.forEach(function (itemW) {
+                let value = 0;
+
+                if (mMap[itemW + ',' + itemH]) {
+                    value = '+';
+                    buildMap = _this.updateClosest(buildMap, _this.state.width, _this.state.height, itemW, itemH);
+                }
+
+                if (!buildMap[itemW + "," + itemH] || value === '+') {
+                    buildMap[itemW + "," + itemH] = {
+                        location: {
+                            x: itemW,
+                            y: itemH
+                        },
+                        value: value,
+                        isRevealed: false
+                    };
+                }
+            });
+        });
+
+        for (let x = 0; x < this.state.height; x++) {
+            for (let y = 0; y < this.state.width; y++) {
+                let key = y + "," + x;
+
+                if (sortMap[x] === undefined)
+                    sortMap[x] = [];
+
+                sortMap[x][y] = buildMap[key];
+            }
+        }
+
+        this.setState(() => ({
+            sortMap: sortMap,
+        }));
+
     };
 
     mineMap = function () {
@@ -173,67 +209,66 @@ class Game extends Component {
         return grid;
     };
 
-    updateMap = function (e) {
-        if (e) {
-            if (this.hasClass(e.target, 'mine')) {
-                alert('you lose');
-            } else {
-                e.target.classList.add('show');
+    updateMap = (e) => {
+
+        if (this.hasClass(e.target, 'mine')) {
+            alert('you lose');
+            this.setState(() => ({
+                sortMap: [],
+            }));
+        } else {
+            let arr = [...this.state.sortMap];
+            let x = e.target.dataset.x;
+            let y = e.target.dataset.y;
+            if(e.target.dataset.x === undefined){
+               let el = e.target.parentElement;
+               x = el.dataset.x;
+               y = el.dataset.y;
+            }
+            const cell = arr[y][x];
+
+            if (!cell.isRevealed && e.target.dataset.val > 0) {
+                cell.isRevealed = true;
+            } else if (!cell.isRevealed && e.target.dataset.val === "0") {
+                this.revealZeros(arr, y, x)
             }
 
-            console.log('click', e);
+            this.setState(() => ({
+                sortMap: [...arr],
+            }));
+
+            //console.log(this.state.sortMap);
+            //e.target.classList.add('show');
         }
+
+        //console.log('click', e.target.dataset);
     };
 
     hasClass = function (element, cls) {
         return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
     };
 
-    buildBoard = () => {
-        let _this = this;
-        let buildMap = {};
-        let sortMap = [];
-        let mMap = {};
-        debugger;
+     revealZeros = (arr, row, col) => {
+         row = parseInt(row);
+         col = parseInt(col);
 
-        mMap = _this.mineMap();
+         console.log('start' ,row, col);
+        if (arr[row] !== undefined && arr[row][col] !== undefined) {
+            if (arr[row][col].value === 0 && !arr[row][col].isRevealed) {
+                arr[row][col].isRevealed = true;
+                console.log('in' , row, col);
+                this.revealZeros(arr, row - 1, col - 1);
+                this.revealZeros(arr, row, col - 1);
+                this.revealZeros(arr, row + 1, col - 1);
 
-        const arrayOfHeight = _.range(0, this.state.height);
-        const arrayOfWidth = _.range(0, this.state.width);
+                this.revealZeros(arr, row - 1, col);
+                this.revealZeros(arr, row + 1, col);
 
-        arrayOfHeight.forEach(function (itemH) {
-            arrayOfWidth.forEach(function (itemW) {
-                let value = 0;
-
-                if (mMap[itemW + ',' + itemH]) {
-                    value = '+';
-                    buildMap = _this.updateClosest(buildMap, _this.state.width, _this.state.height, itemW, itemH);
-                }
-
-                if (!buildMap[itemW + "," + itemH] || value === '+') {
-                    buildMap[itemW + "," + itemH] = {
-                        location: {
-                            x: itemW,
-                            y: itemH
-                        },
-                        value: value,
-                        isRevealed: false
-                    };
-                }
-            });
-        });
-
-        for (let y = 0; y < this.state.height; y++) {
-            for (let x = 0; x < this.state.width; x++) {
-                let key = x + "," + y;
-                sortMap.push(buildMap[key]);
+                this.revealZeros(arr, row - 1, col + 1);
+                this.revealZeros(arr, row, col + 1);
+                this.revealZeros(arr, row + 1, col + 1);
             }
         }
-
-        this.setState(() => ({
-            sortMap: sortMap,
-        }));
-
     };
 
     render() {
@@ -241,9 +276,13 @@ class Game extends Component {
         return (
             <div className="App">
                 <Header/>
-                <Form invoke={this.initState.bind(this)} />
+                <Form invoke={this.initState}/>
                 <div className="board-wrp">
-                    <Board boardData={this.state.sortMap} style={this.state.style} clickOnCell={this.updateMap}/>
+                    <Board
+                        boardData={this.state.sortMap}
+                        style={this.state.style}
+                        clickOnCell={this.updateMap}
+                    />
                 </div>
             </div>
         );

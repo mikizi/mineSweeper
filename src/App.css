@@ -45,6 +45,32 @@
   background-color: #a6d2a8;
 }
 
+.cell > span {
+  pointer-events: none;
+}
+
+form {
+  padding: 10px;
+}
+
+label.inptLbl {
+  margin: 5px;
+}
+
+input[type="submit"] {
+  display: block;
+  margin: 5px auto;
+  width: 300px;
+}
+
+div[data-val="0"] span {
+  display: none;
+}
+
+div[data-val="0"] {
+  background: white;
+}
+
 /*.App-logo {
   animation: App-logo-spin infinite 20s linear;
   height: 80px;
