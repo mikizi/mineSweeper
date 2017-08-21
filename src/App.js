@@ -1,16 +1,12 @@
 import React, {Component} from "react";
-//import logo from './logo.svg';
 import "./App.css";
 import _ from "underscore";
-import classNames from "classnames";
 
-//let classNames = require('classnames');
-//let _ = require('underscore');
+
 
 const Header = () => {
     return (
         <div className="App-header">
-            {/* <img src={logo} className="App-logo" alt="logo" />*/}
             <h2>Mine Sweeper</h2>
         </div>
     );
@@ -19,11 +15,12 @@ const Header = () => {
 const Cell = (props) => {
     const location = props.cellData.location;
     const classes = ( location.x === 0) ? 'first cell' : ((location.x === (props.width - 1)) ? 'last cell' : 'cell');
-    const isMined = props.cellData.value === '+' ? 'mine ' : ''; //glyphicon glyphicon-fire
-    const isReveal = props.cellData.isRevealed ? 'show' : '';
-    const cellClass = classes + ' ' + isMined + ' ' + isReveal;
+    const isMined = props.cellData.value === '+' ? 'mine ' : '';
+    const isReveal = props.cellData.isRevealed ? 'show' : 'no-show';
+    const isFlagged = props.cellData.isFlagged ? 'flagged' : '';
 
-    // console.log(location.x, location.y);
+    const cellClass = classes + ' ' + isMined + ' ' + isReveal + ' ' + isFlagged;
+
     return (
         <div data-x={location.x}
              data-y={location.y}
@@ -70,8 +67,11 @@ class Form extends Component {
 
     handleSubmit = (event) => {
         event.preventDefault();
-        //console.log(this);
-
+        console.log(this.state.mines, this.state.width * this.state.height, this.state.mines > this.state.width * this.state.height);
+        if (this.state.mines > this.state.width * this.state.height) {
+            alert('cant add more mines then cells');
+            return;
+        }
         this.props.invoke(this.state)
     };
 
@@ -88,7 +88,12 @@ class Form extends Component {
                 <input type="number" value={this.state.mines}
                        onChange={(event) => this.setState({mines: event.target.value})} id="minesInpt" name="mines"/>
                 <input type="submit" value="Start Game"/>
+                <div id="flagsAmountWrp">
+                    <label>Flages : </label>
+                    <span id="flagsAmount">{this.props.flags} </span>
+                </div>
             </form>
+
         );
     }
 }
@@ -100,6 +105,8 @@ class Game extends Component {
         height: 0,
         width: 0,
         mines: 0,
+        flags: 0,
+        flaggedMine: 0,
         style: {}
     };
 
@@ -108,6 +115,8 @@ class Game extends Component {
             width: formState.width,
             height: formState.height,
             mines: formState.mines,
+            flags: formState.mines,
+            flaggedMine: formState.mines,
             style: {
                 height: 'auto',
                 width: 50 * formState.width + 2 * formState.width + 'px',
@@ -141,7 +150,8 @@ class Game extends Component {
                             y: itemH
                         },
                         value: value,
-                        isRevealed: false
+                        isRevealed: false,
+                        isFlagged: false
                     };
                 }
             });
@@ -211,23 +221,54 @@ class Game extends Component {
 
     updateMap = (e) => {
 
+        let arr = [...this.state.sortMap];
+        let x = e.target.dataset.x;
+        let y = e.target.dataset.y;
+        if (e.target.dataset.x === undefined) {
+            let el = e.target.parentElement;
+            x = el.dataset.x;
+            y = el.dataset.y;
+        }
+        const cell = arr[y][x];
+
+        if (!cell.isRevealed && e.shiftKey) {
+            cell.isFlagged = !cell.isFlagged;
+            let increment = cell.isFlagged ? -1 : 1;
+
+            if (this.state.flags === 0 && increment === -1) {
+                cell.isFlagged = !cell.isFlagged;
+                alert('No more flags for you!');
+                return;
+            }
+
+            this.setState(() => ({
+                sortMap: [...arr],
+                flags: Number(this.state.flags) + Number(increment)
+            }));
+
+            if (this.hasClass(e.target, 'mine')) {
+                this.setState(() => ({
+                    flaggedMine: Number(this.state.flaggedMine) + Number(increment)
+                }), ()=> {
+                    if (this.state.flaggedMine === 0) {
+                        alert('You Win');
+                        this.setState(() => ({
+                            sortMap: [],
+                        }));
+                    }
+                });
+            }
+
+            return;
+        }
         if (this.hasClass(e.target, 'mine')) {
             alert('you lose');
             this.setState(() => ({
                 sortMap: [],
             }));
         } else {
-            let arr = [...this.state.sortMap];
-            let x = e.target.dataset.x;
-            let y = e.target.dataset.y;
-            if(e.target.dataset.x === undefined){
-               let el = e.target.parentElement;
-               x = el.dataset.x;
-               y = el.dataset.y;
-            }
-            const cell = arr[y][x];
 
-            if (!cell.isRevealed && e.target.dataset.val > 0) {
+            if (!cell.isRevealed && e.target.dataset.val > 0 && !cell.isFlagged) {
                 cell.isRevealed = true;
             } else if (!cell.isRevealed && e.target.dataset.val === "0") {
                 this.revealZeros(arr, y, x)
@@ -236,27 +277,23 @@ class Game extends Component {
             this.setState(() => ({
                 sortMap: [...arr],
             }));
-
-            //console.log(this.state.sortMap);
-            //e.target.classList.add('show');
         }
 
-        //console.log('click', e.target.dataset);
     };
 
     hasClass = function (element, cls) {
         return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
     };
 
-     revealZeros = (arr, row, col) => {
-         row = parseInt(row);
-         col = parseInt(col);
+    revealZeros = (arr, row, col) => {
+        row = parseInt(row);
+        col = parseInt(col);
 
-         console.log('start' ,row, col);
+        console.log('start', row, col);
         if (arr[row] !== undefined && arr[row][col] !== undefined) {
             if (arr[row][col].value === 0 && !arr[row][col].isRevealed) {
                 arr[row][col].isRevealed = true;
-                console.log('in' , row, col);
+                console.log('in', row, col);
                 this.revealZeros(arr, row - 1, col - 1);
                 this.revealZeros(arr, row, col - 1);
                 this.revealZeros(arr, row + 1, col - 1);
@@ -276,7 +313,7 @@ class Game extends Component {
         return (
             <div className="App">
                 <Header/>
-                <Form invoke={this.initState}/>
+                <Form invoke={this.initState} flags={this.state.flags}/>
                 <div className="board-wrp">
                     <Board
                         boardData={this.state.sortMap}
