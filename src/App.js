@@ -3,7 +3,6 @@ import "./App.css";
 import _ from "underscore";
 
 
-
 const Header = () => {
     return (
         <div className="App-header">
@@ -195,7 +194,6 @@ class Game extends Component {
         const endPosX = (thisPosX + 1 >= maxX) ? thisPosX : thisPosX + 1;
         const endPosY = (thisPosY + 1 >= mxaY) ? thisPosY : thisPosY + 1;
 
-        // See how many are alive
         for (let rowNum = startPosX; rowNum <= endPosX; rowNum++) {
             for (let colNum = startPosY; colNum <= endPosY; colNum++) {
                 if (!(rowNum === thisPosX && colNum === thisPosY)) { //if this is current pos then skip
@@ -231,6 +229,7 @@ class Game extends Component {
         }
         const cell = arr[y][x];
 
+        // flag logic
         if (!cell.isRevealed && e.shiftKey) {
             cell.isFlagged = !cell.isFlagged;
             let increment = cell.isFlagged ? -1 : 1;
@@ -249,7 +248,7 @@ class Game extends Component {
             if (this.hasClass(e.target, 'mine')) {
                 this.setState(() => ({
                     flaggedMine: Number(this.state.flaggedMine) + Number(increment)
-                }), ()=> {
+                }), () => {
                     if (this.state.flaggedMine === 0) {
                         alert('You Win');
                         this.setState(() => ({
@@ -261,13 +260,13 @@ class Game extends Component {
 
             return;
         }
+        // mine logic else revealZeros or show hou much mines around you
         if (this.hasClass(e.target, 'mine')) {
             alert('you lose');
             this.setState(() => ({
                 sortMap: [],
             }));
         } else {
-
             if (!cell.isRevealed && e.target.dataset.val > 0 && !cell.isFlagged) {
                 cell.isRevealed = true;
             } else if (!cell.isRevealed && e.target.dataset.val === "0") {
